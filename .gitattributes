@@ -1,0 +1,4 @@
+# Only line-ending-sensitive scripts are pinned to LF; every other file follows
+# the user's autocrlf settings.
+ath-send text eol=lf
+*.sh text eol=lf

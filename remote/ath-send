@@ -1,0 +1,59 @@
+#!/bin/sh
+# ath-send -- the single ATH v1 exit point (design.md §3.3).
+# JSON on stdin or $1 -> base64 -> OSC 1337 SetUserVar written to /dev/tty.
+# Inside tmux the sequence is wrapped in a DCS passthrough automatically.
+#
+# Both the hook scripts and the ath_report MCP server call only this, so the
+# escaping logic exists once. Safe in timeout-sensitive hooks (SessionEnd):
+# returns in milliseconds.
+
+set -eu
+
+TTY="${ATH_TTY:-/dev/tty}"
+
+# Debug: set ATH_DEBUG_LOG=<file> to trace each step (tty path / payload sizes / write result)
+dbg() {
+  [ -n "${ATH_DEBUG_LOG:-}" ] || return 0
+  printf '%s [%s] %s\n' "$(date '+%H:%M:%S')" "$$" "$*" >>"$ATH_DEBUG_LOG" 2>/dev/null || true
+}
+
+dbg "start TTY=$TTY TMUX=${TMUX:-<unset>} ATH_TTY=${ATH_TTY:-<unset>}"
+
+if [ "$#" -ge 1 ]; then
+  payload="$1"
+else
+  payload="$(cat)"
+fi
+[ -n "$payload" ] || { dbg "FAIL empty payload"; echo "ath-send: empty payload" >&2; exit 1; }
+
+# GNU base64 takes -w0; busybox/macOS need tr to strip newlines
+b64="$(printf '%s' "$payload" | base64 -w 0 2>/dev/null || printf '%s' "$payload" | base64 | tr -d '\n')"
+dbg "payload len=${#payload} b64 len=${#b64}"
+
+ESC=$(printf '\033')
+BEL=$(printf '\007')
+osc="${ESC}]1337;SetUserVar=ATH=${b64}${BEL}"
+
+if [ -n "${TMUX:-}" ]; then
+  # tmux 3.3+ defaults allow-passthrough off: the DCS tmux; wrapper gets swallowed whole
+  # and the sequence never reaches the outer terminal. Older versions have no such option
+  # (always pass); treat a failed query as pass and print an actionable fix when off.
+  if command -v tmux >/dev/null 2>&1; then
+    ap="$(tmux show-options -gv allow-passthrough 2>/dev/null || true)"
+    if [ "$ap" = "off" ]; then
+      echo "ath-send: tmux allow-passthrough=off，序列会被吞掉。执行: tmux set -g allow-passthrough on（并写入 ~/.tmux.conf）" >&2
+    fi
+  fi
+  # tmux passthrough: DCS wrapper + doubled inner ESC
+  inner=$(printf '%s' "$osc" | sed "s/${ESC}/${ESC}${ESC}/g")
+  osc="${ESC}Ptmux;${inner}${ESC}\\"
+  dbg "tmux passthrough on, total len=${#osc}"
+fi
+
+if printf '%s' "$osc" >"$TTY" 2>>"${ATH_DEBUG_LOG:-/dev/null}"; then
+  dbg "write ok (${#osc} bytes -> $TTY)"
+else
+  rc=$?
+  dbg "write FAILED rc=$rc tty=$TTY (system error appended on the previous line)"
+  exit "$rc"
+fi

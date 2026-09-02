@@ -1,0 +1,7 @@
+node_modules/
+dist/
+apps/hud/src-tauri/target/
+apps/hud/src-tauri/gen/
+tmp/
+*.log
+.DS_Store

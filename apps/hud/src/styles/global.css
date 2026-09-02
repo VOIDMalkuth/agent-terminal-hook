@@ -1,0 +1,711 @@
+/* ath-hud -- floating HUD theme.
+   Keep DONE_FADE_MS (sessions.ts) in sync with the card-fade duration below. */
+
+:root {
+  /* base background (rgb components); --hud-alpha comes from the opacity slider */
+  --bg-rgb: 17 19 24;
+  --bg-elevated: rgba(30, 34, 42, 0.97);
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.09);
+  --text: #e7eaf0;
+  --text-dim: #9aa3b2;
+  --text-faint: #6d7686;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --gray: #6b7280;
+  --red: #f87171;
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --shadow: rgba(0, 0, 0, 0.55);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.14);
+  --mono: 'Cascadia Code', ui-monospace, Consolas, monospace;
+}
+
+/* light theme (toggled in settings, written to <html data-theme>) */
+:root[data-theme='light'] {
+  --bg-rgb: 246 247 250;
+  --bg-elevated: rgba(255, 255, 255, 0.98);
+  --bg-hover: rgba(15, 23, 42, 0.05);
+  --border: rgba(15, 23, 42, 0.12);
+  --text: #1c2330;
+  --text-dim: #59626f;
+  --text-faint: #8b93a1;
+  --green: #10b981;
+  --amber: #ea9c06; /* darkened amber: deeper than #f59e0b without going red */
+  --gray: #9ca3af;
+  --red: #dc2626;
+  --btn-bg: rgba(15, 23, 42, 0.05);
+  --shadow: rgba(15, 23, 42, 0.3);
+  --scrollbar-thumb: rgba(15, 23, 42, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent; /* required for the transparent window */
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  user-select: none;
+  cursor: default;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ---------- layout ---------- */
+
+.hud-root {
+  height: 100%;
+  padding: 10px;
+}
+/* collapsed strip: small window, matching tight padding (the CHROME=10 in the size formula) */
+.hud-root.is-collapsed {
+  padding: 4px;
+}
+
+.hud-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* shell background follows --hud-alpha; cards use their own --card-alpha */
+  background: rgb(var(--bg-rgb) / var(--hud-alpha, 0.88));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 48px var(--shadow);
+  overflow: hidden;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.hud-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+.hud-grip {
+  /* keep the grip readable in the light theme (--text-faint is too faint there) */
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: -1px;
+}
+
+.hud-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.hud-count {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  background: var(--bg-hover);
+  border-radius: 8px;
+  padding: 1px 7px;
+}
+
+.hud-spacer {
+  flex: 1;
+}
+
+.icon-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.icon-btn.active {
+  color: var(--amber);
+}
+
+.hud-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 12px;
+}
+/* content wrapper: the natural-height element the auto-size measurement reads */
+.hud-body-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* collapsed: edge strip -- header hidden entirely; the strip carries its own grip */
+.hud-card.is-collapsed .hud-header {
+  display: none;
+}
+.hud-strip {
+  /* fill the window (flex:1); grip pinned to the start end, dots centered in the rest */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 8px 0 4px;
+  cursor: move; /* the strip drags; only a dot's center expands */
+}
+.hud-strip.is-h {
+  flex-direction: row;
+  padding: 0 4px 0 12px;
+}
+.hud-strip-grip {
+  flex: none;
+  color: var(--text-dim);
+  font-size: 14px; /* matches the dot/capsule scale */
+  letter-spacing: -1px;
+  line-height: 1;
+  cursor: move;
+}
+/* faint separator between grip and dots (horizontal on vertical strips, vice versa) */
+.hud-strip-sep {
+  flex: none;
+  width: 16px;
+  height: 1px;
+  background: var(--border);
+}
+.hud-strip.is-h .hud-strip-sep {
+  width: 1px;
+  height: 16px;
+}
+.hud-strip-dots {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.hud-strip.is-h .hud-strip-dots {
+  flex-direction: row;
+}
+/* in-strip empty capsule scales down; capsule and dots are expand hotspots -> pointer cursor */
+.hud-card.is-collapsed .mark-empty {
+  --me-w: 16px;
+  --me-h: 8px;
+  cursor: pointer;
+}
+.dot-btn .dot {
+  cursor: pointer;
+}
+
+/* collapsed strip: keep a shadow but tighten it (small blur, no offset) — the 48px
+   halo gets clipped into a black ring by the narrow window; smaller radius keeps
+   the 14px rounding from eating into the strip */
+.hud-card.is-collapsed {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.45);
+  border-radius: 9px;
+}
+
+.dot-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 4px; /* edges belong to dragging; the center 14px dot is the expand hotspot */
+  cursor: move;
+  line-height: 1;
+}
+/* display:block on the dot removes the ~1.3px strut offset inside the button */
+.dot-btn .dot {
+  display: block;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- status dot animation ---------- */
+
+.dot {
+  position: relative;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+/* working and waiting_input share one animation: within a 2.4s period the dot grows
+   and fades (biggest when faintest); color tells the states apart. animation-delay is
+   written inline on mount (lib/anim.ts) to keep all dots in phase */
+.dot-working {
+  background: var(--green);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.dot-waiting_input {
+  background: var(--amber);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.dot-stale {
+  background: var(--gray);
+  animation: none;
+}
+.dot-done {
+  width: auto;
+  height: auto;
+  background: none;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.dot-big {
+  width: 14px;
+  height: 14px;
+}
+/* empty-state mark: dashed capsule with an inset bar (empty slot + skeleton placeholder) */
+.mark-empty {
+  --me-w: 30px;
+  --me-h: 12px;
+  display: inline-block;
+  position: relative;
+  width: var(--me-w);
+  height: var(--me-h);
+  border: 2px dashed var(--text-faint);
+  border-radius: 999px;
+}
+.mark-empty::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 55%;
+  height: 2px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--text-faint);
+}
+.mark-empty-lg {
+  --me-w: 46px;
+  --me-h: 16px;
+}
+/* op pulse ring: keyed child replayed per op; the dot itself never remounts */
+.dot-ping {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: inherit;
+  animation: ping 0.6s ease-out forwards;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.3;
+  }
+}
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+/* collapsed-strip ripple: at 30px window width a 2.8x ring clips, so 1.9x (14px dot -> ~27px) */
+@keyframes ping-sm {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+.dot-btn .dot-ping {
+  animation-name: ping-sm;
+}
+
+/* ---------- session card ---------- */
+
+.card {
+  /* cards use their own --card-alpha slider, independent of the shell */
+  background: rgb(var(--bg-rgb) / var(--card-alpha, 1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: none;
+  animation: card-in 0.25s ease;
+}
+.card.st-waiting_input {
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+}
+.card.is-stale {
+  opacity: 0.72;
+}
+/* done: 5s hold, then 1s fade (matches DONE_FADE_MS=6000) */
+.card.is-done {
+  animation:
+    card-in 0.25s ease,
+    card-fade 1s ease 5s forwards;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes card-fade {
+  to {
+    opacity: 0.22;
+    filter: grayscale(0.8);
+  }
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip {
+  font-size: 10px;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.5px 6px;
+  white-space: nowrap;
+}
+.chip-stale {
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+.chip-wait {
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+  font-family: var(--mono);
+}
+
+.state-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.state-label.st-working {
+  color: var(--green);
+}
+.state-label.st-waiting_input {
+  color: var(--amber);
+}
+.state-label.st-done {
+  color: var(--text-faint);
+}
+
+/* delete buttons: hidden until card hover; pinned once stale */
+.card-del {
+  font-size: 11px;
+  padding: 2px 5px;
+  color: var(--text-faint);
+  flex: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.card:hover .card-del,
+.card.is-stale .card-del {
+  opacity: 1;
+  pointer-events: auto;
+}
+.card-del:hover {
+  color: var(--red);
+  background: var(--bg-hover);
+}
+
+.card-report {
+  padding-left: 17px;
+  /* report rows share one size; hierarchy is color only (summary/reason/next) */
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.report-summary {
+  color: var(--text);
+}
+.report-sub {
+  color: var(--text-dim);
+}
+.report-mark {
+  flex: none;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+.report-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- op stream ---------- */
+
+.ops {
+  padding-left: 17px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.ops-last {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.op-tool {
+  color: var(--text);
+  font-weight: 600;
+  flex: none;
+}
+.op-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-time {
+  color: var(--text-faint);
+  flex: none;
+}
+.op-more {
+  color: var(--text-dim);
+  font-size: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 4px;
+  flex: none;
+}
+/* paired PreToolUse(start)/PostToolUse(end): spinner while running, ✗ on failure */
+.op-spin {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--green);
+  border-right-color: transparent;
+  border-radius: 50%;
+  align-self: center;
+  animation: op-rotate 0.8s linear infinite;
+}
+@keyframes op-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.op-fail {
+  color: var(--red);
+  font-weight: 700;
+  flex: none;
+}
+
+/* ---------- empty state ---------- */
+
+.empty {
+  margin: auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 20px 10px;
+}
+.empty-glyph {
+  color: var(--text-faint);
+  line-height: 1;
+}
+.empty-title {
+  font-weight: 600;
+}
+.empty .dim {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.empty-warn {
+  color: var(--red);
+  font-size: 11.5px;
+}
+.empty code,
+.dim code {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* ---------- settings panel ---------- */
+
+.settings {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  width: 265px;
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  box-shadow: 0 10px 36px var(--shadow);
+  animation: card-in 0.15s ease;
+}
+.settings-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+.settings .row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.settings .row input[type='range'] {
+  width: 100%;
+  accent-color: var(--green);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+.check input {
+  accent-color: var(--green);
+}
+.settings fieldset.actions {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  margin: 0;
+}
+.settings legend {
+  font-size: 11px;
+  color: var(--text-faint);
+  padding: 0 4px;
+}
+
+.gateway-box {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 8px;
+}
+.gateway-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lamp {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray);
+  flex: none;
+}
+.lamp.ok {
+  background: var(--green);
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  color: var(--text);
+  font-size: 12px;
+  border-radius: 7px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.btn:hover {
+  background: var(--bg-hover);
+}
+.btn.tiny {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  margin-left: auto;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.settings-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dim {
+  color: var(--text-dim);
+}

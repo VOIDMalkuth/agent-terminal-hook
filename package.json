@@ -1,0 +1,21 @@
+{
+  "name": "agent-terminal-hook",
+  "private": true,
+  "version": "0.1.0",
+  "description": "agent-terminal-hook — floating HUD for agent sessions",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "hud": "npm run tauri -w @ath/hud -- dev",
+    "hud:build": "npm run build -w @ath/hud",
+    "app:build": "npm run tauri -w @ath/hud -- build --no-bundle && node scripts/stamp-exe.mjs",
+    "pkg:agent": "node scripts/pkg-agent.mjs",
+    "mock": "node scripts/mock-send.mjs",
+    "gen:icon": "node scripts/gen-icon.mjs && npm run tauri -w @ath/hud -- icon ../../scripts/icon-source.png -o src-tauri/icons && node scripts/prune-icons.mjs"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}
