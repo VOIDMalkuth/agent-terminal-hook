@@ -229,7 +229,9 @@ function shExe() {
 }
 
 function sendTty(msg) {
-  const r = spawnSync(shExe(), [ATH_SEND], {
+  // `sh <file>` opens a script by path and never searches PATH; route through
+  // `exec "$1"` so a bare "ath-send" (installer copies it to ~/.local/bin) resolves
+  const r = spawnSync(shExe(), ['-c', 'exec "$1"', 'ath-send-runner', ATH_SEND], {
     input: JSON.stringify(msg),
     // SessionEnd hook budget is 3s (codex cap); keep 500ms for stdin read + teardown so bye survives
     timeout: 2500,

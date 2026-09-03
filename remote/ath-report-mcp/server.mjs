@@ -64,7 +64,9 @@ function shExe() {
 }
 
 function sendTty(msg) {
-  const r = spawnSync(shExe(), [ATH_SEND], {
+  // `sh <file>` opens a script by path and never searches PATH; route through
+  // `exec "$1"` so an ATH_SEND override with a bare name resolves too
+  const r = spawnSync(shExe(), ['-c', 'exec "$1"', 'ath-send-runner', ATH_SEND], {
     input: JSON.stringify(msg),
     timeout: 3000,
     stdio: ['pipe', 'ignore', 'pipe'],
