@@ -2,6 +2,7 @@
    Keep DONE_FADE_MS (sessions.ts) in sync with the card-fade duration below. */
 
 :root {
+  color-scheme: dark;
   /* base background (rgb components); --hud-alpha comes from the opacity slider */
   --bg-rgb: 17 19 24;
   --bg-elevated: rgba(30, 34, 42, 0.97);
@@ -22,6 +23,7 @@
 
 /* light theme (toggled in settings, written to <html data-theme>) */
 :root[data-theme='light'] {
+  color-scheme: light;
   --bg-rgb: 246 247 250;
   --bg-elevated: rgba(255, 255, 255, 0.98);
   --bg-hover: rgba(15, 23, 42, 0.05);
@@ -601,7 +603,7 @@ body {
   position: absolute;
   top: 36px;
   right: 8px;
-  width: 265px;
+  width: 290px;
   max-height: calc(100% - 48px);
   overflow-y: auto;
   background: var(--bg-elevated);
@@ -628,9 +630,19 @@ body {
   font-size: 12px;
   color: var(--text-dim);
 }
-.settings .row input[type='range'],
-.settings .row input[type='number'] {
+.settings .row input[type='range'] {
   width: 100%;
+  accent-color: var(--green);
+}
+/* inline number input: theme-aware colors so it doesn't glare in dark mode */
+.num-inline {
+  width: 4.5em;
+  background: var(--btn-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
   accent-color: var(--green);
 }
 .check {

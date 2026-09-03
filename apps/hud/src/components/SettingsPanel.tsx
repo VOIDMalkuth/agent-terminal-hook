@@ -102,10 +102,11 @@ export function SettingsPanel({ panelRef }: { panelRef: RefObject<HTMLDivElement
         stale 角标（1h 无消息）
       </label>
 
-      <label className="row">
-        <span>审批提示阈值：{s.reviewTimeoutSec}s 无进展才标黄</span>
+      <label className="check">
+        审批提示阈值：
         <input
           type="number"
+          className="num-inline"
           min={5}
           max={600}
           step={5}
@@ -116,6 +117,7 @@ export function SettingsPanel({ panelRef }: { panelRef: RefObject<HTMLDivElement
             })
           }
         />
+        s 无进展
       </label>
 
       <div className="gateway-box">
