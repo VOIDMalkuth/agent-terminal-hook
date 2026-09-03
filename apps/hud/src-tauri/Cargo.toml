@@ -1,6 +1,6 @@
 [package]
 name = "ath-hud"
-version = "0.1.0"
+version = "0.1.1"
 description = "ath-hud - floating HUD for agent sessions"
 edition = "2021"
 rust-version = "1.77"
