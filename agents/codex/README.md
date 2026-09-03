@@ -36,7 +36,10 @@ Inside the Linux environment (WSL counts):
 node agents/codex/install.mjs
 ```
 
-The installer is idempotent and backs up a foreign `hooks.json` before replacing it.
+The installer is idempotent and backs up a foreign `hooks.json` before replacing
+it. Runtime files deploy to `~/.codex/ath` — if that folder already exists the
+installer asks before overwriting (skip the prompt with `--yes`), and the
+unpacked package folder can be deleted right after installing.
 Then:
 
 1. Restart running codex sessions.
@@ -50,9 +53,9 @@ Then:
 node agents/codex/install.mjs uninstall
 ```
 
-Removes `hooks.json` and the `[mcp_servers.ath]` block. Left alone on purpose:
-`~/.local/bin/ath-send`, `~/.codex/ath_report/` timer state, and orphaned trust
-entries inside codex's own state (harmless).
+Removes `hooks.json`, the `[mcp_servers.ath]` block and the `~/.codex/ath`
+runtime. Left alone on purpose: `~/.local/bin/ath-send`, `~/.codex/ath_report/`
+timer state, and orphaned trust entries inside codex's own state (harmless).
 
 ## Environment switches
 

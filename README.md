@@ -78,8 +78,8 @@ npm run pkg:agent
 → `dist/ath-agent-<version>.tar.gz` — codex installer, hook bridge, MCP server
 and ath-send in the repo's own layout. On the agent machine (WSL/Linux): unpack
 anywhere, enter the folder, run `node agents/codex/install.mjs`, then trust the
-hooks via `/hooks` in codex. Keep the unpacked folder in place — install
-references `hook.mjs` and `server.mjs` by absolute path.
+hooks via `/hooks` in codex. Runtime files deploy to `~/.codex/ath` — the
+unpacked folder can be deleted after install.
 
 → `dist/ath-gateway-<version>.lua` — standalone copy of the WezTerm gateway. On
 the Windows side, dofile it from `~/.wezterm.lua` (see `gateway/wezterm/README.md`).
