@@ -5,9 +5,11 @@
 // in for (message shapes match packages/protocol, the schema source of truth).
 //
 // Usage:
-//   node scripts/mock-send.mjs                 # one ~35s four-session scenario
+//   node scripts/mock-send.mjs                 # one ~66s four-session scenario
 //   node scripts/mock-send.mjs --loop          # keep replaying
-//   node scripts/mock-send.mjs --speed 3       # 3x speed
+//   node scripts/mock-send.mjs --speed 3       # 3x speed (note: the review
+//                                              # timeout flip is real-time in
+//                                              # the HUD, so keep speed=1 to see it)
 //   node scripts/mock-send.mjs --token XXX --url http://127.0.0.1:7301/event
 //
 // Token defaults to %APPDATA%\com.ath.hud\token, or the ATH_TOKEN env var.
@@ -41,8 +43,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /**
  * One scenario pass: four sessions plus a "reconnect" session without register,
  * covering every message type: register / state / report / bye, op start-end
- * pairing (key), failure close (ok:false). `at` is ms at speed=1. sids are
- * regenerated each cycle so cards never collide with the previous round.
+ * pairing (key), failure close (ok:false), and review marks — session A shows a
+ * fast auto-review (stays green), session D an approval that lingers past
+ * reviewTimeoutSec and flips the card to the yellow "possible approval" state.
+ * `at` is ms at speed=1. sids are regenerated each cycle so cards never collide.
  */
 function buildScenario(sidA, sidB, sidC, sidD) {
   // Reference sender behavior: identity fields (title/cwd/agent/host) on every
@@ -60,6 +64,8 @@ function buildScenario(sidA, sidB, sidC, sidD) {
     { at: 2400, msg: mk(A, { type: 'op', op: { tool: 'Edit', summary: 'src/auth.rs:120', phase: 'end', key: 'e1' } }) },
     { at: 3000, msg: mk(A, { type: 'report', report: { summary: '重构登录权限校验', reason: 'token 校验遗漏过期分支', next: '修完跑全量测试' } }) },
     { at: 4200, msg: mk(A, { type: 'op', op: { tool: 'Bash', summary: 'cargo test -q', phase: 'start', key: 'e2' } }) },
+    // auto-review resolves fast: the card stays green throughout
+    { at: 4400, msg: mk(A, { type: 'review', review: { tool: 'Bash', key: 'e2' } }) },
     { at: 5600, msg: mk(A, { type: 'op', op: { tool: 'Bash', summary: 'cargo test -q', phase: 'end', key: 'e2' } }) },
     { at: 7000, msg: mk(A, { type: 'state', state: 'waiting_input' }) }, // awaiting approval
 
@@ -88,10 +94,13 @@ function buildScenario(sidA, sidB, sidC, sidD) {
     { at: 27800, msg: mk(B, { type: 'report', report: { summary: '参数解析抽到独立模块', reason: 'main.rs 过长，先拆再测', next: '修复失败用例后补集成测试' } }) },
     { at: 29000, msg: mk(B, { type: 'state', state: 'waiting_input' }) },
 
-    // -- D: op without register (simulates a lost first message / HUD reconnect) --
+    // -- D: op without register (lost first message / HUD reconnect), then an
+    // approval that lingers: past reviewTimeoutSec (30s default) the card flips
+    // to yellow "possible approval"; the op end returns it to working --
     { at: 29600, msg: mk(D, { type: 'op', op: { tool: 'Bash', summary: 'git rebase --continue', phase: 'start', key: 'd1' } }) },
-    { at: 31200, msg: mk(D, { type: 'op', op: { tool: 'Bash', summary: 'git rebase --continue', phase: 'end', key: 'd1' } }) },
-    { at: 32600, msg: mk(D, { type: 'state', state: 'waiting_input' }) },
+    { at: 30000, msg: mk(D, { type: 'review', review: { tool: 'Bash', key: 'd1' } }) },
+    { at: 65000, msg: mk(D, { type: 'op', op: { tool: 'Bash', phase: 'end', key: 'd1' } }) },
+    { at: 66000, msg: mk(D, { type: 'state', state: 'waiting_input' }) },
 
     // -- closing: A finishes its last test round and says bye --
     { at: 33600, msg: mk(A, { type: 'op', op: { tool: 'Bash', summary: 'cargo test --all', phase: 'start', key: 'e4' } }) },
