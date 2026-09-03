@@ -7,6 +7,7 @@
 //   UserPromptSubmit -> state(working)   PreToolUse -> op(start, key=tool_use_id)
 //   PostToolUse -> op(end, key=tool_use_id) (Codex has no failure event, ok is never set)
 //   PermissionRequest -> review (stays working; HUD hints possible-approval after a timeout)
+//   Interrupt -> state(waiting_input) (user killed the turn; 3s budget like SessionEnd)
 //   SessionEnd -> bye (3s budget: installer sets codex's cap; sendTty capped at 2.5s)
 //   PreCompact/PostCompact/SubagentStart/SubagentStop -> ignored
 //
@@ -113,6 +114,8 @@ function toAthMessage(label, j) {
         },
       };
     case 'Stop':
+    case 'Interrupt':
+      // turn ended normally or was killed by the user: nothing runs, back to waiting
       return { ...base, type: 'state', state: 'waiting_input' };
     case 'SessionEnd':
       return { ...base, type: 'bye' };

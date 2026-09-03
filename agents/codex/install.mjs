@@ -28,6 +28,7 @@ const EVENTS = [
   'PostToolUse',
   'PermissionRequest',
   'Stop',
+  'Interrupt',
   'SessionEnd',
 ];
 
@@ -40,7 +41,7 @@ function hooksConfig() {
           {
             type: 'command',
             command: `node "${HOOK_PATH}" ${ev}`,
-            timeout: ev === 'SessionEnd' ? 3 : 10,
+            timeout: ev === 'SessionEnd' || ev === 'Interrupt' ? 3 : 10,
             statusMessage: 'reporting to ath-hud',
           },
         ],

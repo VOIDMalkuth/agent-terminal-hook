@@ -6,7 +6,7 @@ What you get:
 
 - **Lifecycle hooks** (`~/.codex/hooks.json`) — session cards on the HUD:
   register/working per turn, tool-call timeline paired by `tool_use_id`,
-  waiting on permission prompts and turn end, `bye` on session end.
+  waiting on permission prompts, turn end and interrupts, `bye` on session end.
 - **Reminder injection** — `SessionStart` establishes the self-report convention and
   hands the model its session sid; `PostToolUse` injects a reminder when no `ath_report`
   call happened for 5 minutes. Timer state lives in `~/.codex/ath_report/<sess_id>.json`
