@@ -94,6 +94,9 @@ function install() {
     '[mcp_servers.ath]',
     'command = "node"',
     `args = ["${SERVER_PATH}"]`,
+    // codex spawns MCP servers with a whitelist of the parent env; forward the
+    // tmux markers (ath-send wraps OSC only inside tmux) and our overrides
+    'env_vars = ["TMUX", "TMUX_PANE", "ATH_URL", "ATH_TRANSPORT", "ATH_SEND", "ATH_TOKEN"]',
     `# <<< ${MARKER} end <<<`,
     '',
   ].join('\n');
