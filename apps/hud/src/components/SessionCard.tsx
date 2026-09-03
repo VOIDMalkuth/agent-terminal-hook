@@ -8,6 +8,7 @@ import { cx } from '../lib/cx';
 const STATE_LABEL: Record<SessionState, string> = {
   working: 'working',
   waiting_input: 'waiting_input',
+  review: 'possible approval',
   done: 'done',
 };
 

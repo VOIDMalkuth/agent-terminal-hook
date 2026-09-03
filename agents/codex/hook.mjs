@@ -6,7 +6,7 @@
 //     ignored (mid-turn continuation; flipping to waiting would flash a working card)
 //   UserPromptSubmit -> state(working)   PreToolUse -> op(start, key=tool_use_id)
 //   PostToolUse -> op(end, key=tool_use_id) (Codex has no failure event, ok is never set)
-//   PermissionRequest -> state(waiting_input)   Stop -> state(waiting_input)
+//   PermissionRequest -> review (stays working; HUD hints possible-approval after a timeout)
 //   SessionEnd -> bye (3s budget: installer sets codex's cap; sendTty capped at 2.5s)
 //   PreCompact/PostCompact/SubagentStart/SubagentStop -> ignored
 //
@@ -101,7 +101,17 @@ function toAthMessage(label, j) {
         },
       };
     case 'PermissionRequest':
-      return { ...base, type: 'state', state: 'waiting_input' };
+      // auto-review makes this ambiguous (identical event for human vs reviewer):
+      // mark a pending review and keep working; the HUD turns it into a yellow
+      // "possible approval" only if the mark lingers past the user's timeout
+      return {
+        ...base,
+        type: 'review',
+        review: {
+          tool: j.tool_name ?? 'approval',
+          ...(j.tool_use_id ? { key: j.tool_use_id } : {}),
+        },
+      };
     case 'Stop':
       return { ...base, type: 'state', state: 'waiting_input' };
     case 'SessionEnd':

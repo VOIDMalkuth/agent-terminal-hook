@@ -40,8 +40,9 @@ use `ATH_TRANSPORT=http` locally.
 
 ```
 register  { state? }         new card, defaults to waiting_input
-state     { state }          working | waiting_input | done
+state     { state }          working | waiting_input | review | done
 op        { tool, summary?, key?, phase: start|end, ok? }   tool-call timeline
+review    { tool, key? }     PermissionRequest seen (codex); stays working
 report    { summary, reason?, next? }                       model self-description
 bye                          session ended (Codex only; ZCode lacks SessionEnd)
 ```
@@ -55,9 +56,12 @@ aggregation key — tmux/SSH reconnects keep the same card.
 - `op` arrivals imply working; start/end pair by `key` (toolCallId), fallback
   FIFO by tool name. Codex has no failure event; ZCode marks failures via
   `PostToolUseFailure` with `ok:false`.
-- `waiting_input` sources: registration, permission requests, turn end.
+- `waiting_input` sources: registration, turn end, interrupt (codex).
   Optional local beep. Periodic ripple every 3 minutes while waiting (stops at
   stale), in both expanded cards and the collapsed edge strip.
+- `review` (codex PermissionRequest): auto-review makes the event ambiguous, so
+  the card stays working; if the mark lingers past the configurable timeout
+  (settings) it flips to a yellow "possible approval". Any op arrival clears it.
 - `stale` (default on, toggleable): no messages for 1h — gray badge, delete
   button pinned; manual ⚑ mark supported, cleared by any new message.
 - `done`: single line for 5s + 1s fade, then removed.

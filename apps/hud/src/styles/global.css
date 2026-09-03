@@ -270,6 +270,10 @@ body {
   background: var(--amber);
   animation: breathe 2.4s ease-in-out infinite;
 }
+.dot-review {
+  background: var(--amber);
+  animation: breathe 2.4s ease-in-out infinite;
+}
 .dot-stale {
   background: var(--gray);
   animation: none;
@@ -372,7 +376,8 @@ body {
   flex: none;
   animation: card-in 0.25s ease;
 }
-.card.st-waiting_input {
+.card.st-waiting_input,
+.card.st-review {
   border-color: color-mix(in srgb, var(--amber) 40%, transparent);
 }
 .card.is-stale {
@@ -443,7 +448,8 @@ body {
 .state-label.st-working {
   color: var(--green);
 }
-.state-label.st-waiting_input {
+.state-label.st-waiting_input,
+.state-label.st-review {
   color: var(--amber);
 }
 .state-label.st-done {
@@ -622,7 +628,8 @@ body {
   font-size: 12px;
   color: var(--text-dim);
 }
-.settings .row input[type='range'] {
+.settings .row input[type='range'],
+.settings .row input[type='number'] {
   width: 100%;
   accent-color: var(--green);
 }

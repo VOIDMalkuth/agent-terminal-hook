@@ -12,10 +12,10 @@ import { z } from 'zod';
  * display-only, agents never trigger popups/clipboard/links.
  */
 
-export const STATE_VALUES = ['working', 'waiting_input', 'done'] as const;
+export const STATE_VALUES = ['working', 'waiting_input', 'review', 'done'] as const;
 export type SessionState = (typeof STATE_VALUES)[number];
 
-export const MESSAGE_TYPES = ['register', 'state', 'op', 'report', 'bye'] as const;
+export const MESSAGE_TYPES = ['register', 'state', 'op', 'review', 'report', 'bye'] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
 export const AthMessageSchema = z.object({
@@ -47,6 +47,16 @@ export const AthMessageSchema = z.object({
       phase: z.enum(['start', 'end']).optional(),
       /** only meaningful on end: false = failed */
       ok: z.boolean().optional(),
+    })
+    .optional(),
+  /** type=review — PermissionRequest seen. The HUD keeps the session working and
+   *  only flips to a yellow "possible approval" if the mark lingers past the
+   *  user-configured timeout (auto-review must not flash waiting_input) */
+  review: z
+    .object({
+      tool: z.string().min(1),
+      /** tool_use_id of the pending approval; a matching op end clears the mark */
+      key: z.string().optional(),
     })
     .optional(),
   /** type=report — model's high-level self-description (ath_report MCP, low frequency) */

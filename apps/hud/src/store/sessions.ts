@@ -50,6 +50,10 @@ export interface Session {
   doneAt?: number;
   /** manual stale (⚑ button); any new message clears it (session is alive again) */
   staleMarked?: boolean;
+  /** PermissionRequest seen: session stays working; tick() flips the state to
+   *  `review` (yellow "possible approval") once this lingers past the
+   *  user-configured timeout. Any op arrival or explicit state clears it. */
+  pendingReview?: { tool: string; key?: string; at: number };
 }
 
 interface SessionsState {
@@ -98,6 +102,7 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
     startedAt: prev?.startedAt ?? now,
     waitingSince: prev?.waitingSince,
     doneAt: prev?.doneAt,
+    pendingReview: prev?.pendingReview,
     // staleMarked is not inherited: any new message = signs of life = manual stale clears
     staleMarked: undefined,
   };
@@ -114,6 +119,7 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
         s.state = msg.state ?? 'waiting_input';
         s.waitingSince = s.state === 'waiting_input' ? now : undefined;
         s.doneAt = undefined;
+        s.pendingReview = undefined;
       }
       break;
 
@@ -127,6 +133,8 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
         }
         s.waitingSince = msg.state === 'waiting_input' ? (s.waitingSince ?? now) : undefined;
         s.doneAt = msg.state === 'done' ? (s.doneAt ?? now) : undefined;
+        // an explicit state change (turn end, new turn) supersedes a pending approval
+        s.pendingReview = undefined;
       }
       break;
 
@@ -165,11 +173,25 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
           // no phase: instant event (mock script / legacy senders)
           s.ops = pushOp(s.ops, { tool: op.tool, summary: op.summary, at: now });
         }
-        // op = a tool is executing: back to working (e.g. approved permission), ends wait/done
+        // op = a tool is executing: back to working (e.g. approved permission), ends wait/done;
+        // any op arrival also clears a pending approval (the tool either ran or was replaced)
         s.state = 'working';
         s.waitingSince = undefined;
         s.doneAt = undefined;
+        s.pendingReview = undefined;
         s.opPulse += 1;
+      }
+      break;
+
+    case 'review':
+      if (msg.review) {
+        // PermissionRequest: ambiguous under auto-review (identical event for human and
+        // reviewer) — keep working; tick() flips to `review` past the configured timeout
+        s.pendingReview = {
+          tool: msg.review.tool,
+          ...(msg.review.key ? { key: msg.review.key } : {}),
+          at: now,
+        };
       }
       break;
 
@@ -188,6 +210,7 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
       s.state = 'done';
       s.doneAt = now;
       s.waitingSince = undefined;
+      s.pendingReview = undefined;
       break;
 
     default:
@@ -233,22 +256,32 @@ export const useSessions = create<SessionsState>((set, get) => ({
     set((st) => {
       const now = Date.now();
       let removed = false;
+      let changed = false;
       const sessions: Record<string, Session> = {};
+      const reviewMs = useSettings.getState().reviewTimeoutSec * 1000;
       for (const [sid, s] of Object.entries(st.sessions)) {
         if (s.state === 'done' && s.doneAt !== undefined && now - s.doneAt > DONE_FADE_MS) {
           removed = true;
           continue;
         }
+        // a pending approval that outlives the timeout becomes a yellow "possible approval"
+        if (s.pendingReview && s.state === 'working' && now - s.pendingReview.at >= reviewMs) {
+          sessions[sid] = { ...s, state: 'review', pendingReview: undefined };
+          changed = true;
+          continue;
+        }
         sessions[sid] = s;
       }
-      return removed ? { now, sessions } : { now };
+      if (removed || changed) return { now, sessions };
+      return { now };
     }),
 
   clear: () => set({ sessions: {} }),
 }));
 
-/** waiting_input first, then working, then the rest; recency within a rank */
+/** waiting_input first, then possible approval, then working, then done; recency within a rank */
 export function sortSessions(list: Session[], _now: number): Session[] {
-  const rank = (s: Session) => (s.state === 'waiting_input' ? 0 : s.state === 'working' ? 1 : 2);
+  const rank = (s: Session) =>
+    s.state === 'waiting_input' ? 0 : s.state === 'review' ? 1 : s.state === 'working' ? 2 : 3;
   return [...list].sort((a, b) => rank(a) - rank(b) || b.lastAt - a.lastAt);
 }

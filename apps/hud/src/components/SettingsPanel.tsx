@@ -102,6 +102,22 @@ export function SettingsPanel({ panelRef }: { panelRef: RefObject<HTMLDivElement
         stale 角标（1h 无消息）
       </label>
 
+      <label className="row">
+        <span>审批提示阈值：{s.reviewTimeoutSec}s 无进展才标黄</span>
+        <input
+          type="number"
+          min={5}
+          max={600}
+          step={5}
+          value={s.reviewTimeoutSec}
+          onChange={(e) =>
+            s.patch({
+              reviewTimeoutSec: Math.max(5, Math.min(600, Number(e.target.value) || 30)),
+            })
+          }
+        />
+      </label>
+
       <div className="gateway-box">
         <span className={cx('lamp', gateway?.bound && 'ok')} />
         <span className="dim gateway-text">

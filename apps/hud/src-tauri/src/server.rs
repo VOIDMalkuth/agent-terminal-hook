@@ -167,7 +167,7 @@ fn validate_ath_v1(v: &Value) -> Result<(), String> {
         return Err("unsupported protocol version: field v must be 1".into());
     }
     let ty = obj.get("type").and_then(Value::as_str).unwrap_or_default();
-    if !matches!(ty, "register" | "state" | "op" | "report" | "bye") {
+    if !matches!(ty, "register" | "state" | "op" | "review" | "report" | "bye") {
         return Err(format!("unknown message type: {ty}"));
     }
     if obj

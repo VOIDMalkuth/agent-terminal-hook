@@ -14,6 +14,9 @@ export interface SettingsState {
   soundOnWaiting: boolean;
   /** stale chip toggle: gray "stale" chip after >1h of silence; default on */
   staleOn: boolean;
+  /** seconds a pending approval (PermissionRequest) stays green before flipping
+   *  to the yellow "possible approval" state */
+  reviewTimeoutSec: number;
   /** runtime only: collapsed to the edge strip (not persisted; starts minimized,
    *  auto-expands when the first session arrives) */
   collapsed: boolean;
@@ -33,6 +36,7 @@ export const useSettings = create<SettingsState>()(
       alwaysOnTop: true,
       soundOnWaiting: true,
       staleOn: true,
+      reviewTimeoutSec: 30,
       collapsed: true,
       dockSide: 'right',
       patch: (p) => set(p),
@@ -47,6 +51,7 @@ export const useSettings = create<SettingsState>()(
         alwaysOnTop: s.alwaysOnTop,
         soundOnWaiting: s.soundOnWaiting,
         staleOn: s.staleOn,
+        reviewTimeoutSec: s.reviewTimeoutSec,
         dockSide: s.dockSide,
       }),
       // v4: stale defaults to on — one-time flip of a persisted false to true
@@ -59,6 +64,7 @@ export const useSettings = create<SettingsState>()(
           alwaysOnTop: s.alwaysOnTop !== false,
           soundOnWaiting: s.soundOnWaiting !== false,
           staleOn: true,
+          reviewTimeoutSec: typeof s.reviewTimeoutSec === 'number' && s.reviewTimeoutSec > 0 ? s.reviewTimeoutSec : 30,
           dockSide:
             s.dockSide === 'left' || s.dockSide === 'right' || s.dockSide === 'top' || s.dockSide === 'bottom'
               ? s.dockSide
