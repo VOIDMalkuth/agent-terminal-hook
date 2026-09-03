@@ -4,8 +4,7 @@ import { useSettings } from './settings';
 import { playBeep } from '../lib/sound';
 
 export const STALE_MS = 60 * 60 * 1000; // >1h without any message -> stale chip (design.md §2.3)
-/** waiting_input periodic ripple: every 3 minutes, stops once stale */
-export const WAITING_PING_MS = 180_000;
+/** waiting_input notification interval (ripple + ring) lives in settings: waitingNotifyMin */
 /** register race window: with SessionStart/UserPromptSubmit hooks firing
  *  concurrently, a late register must not flip a working card */
 const REGISTER_RACE_MS = 5_000;
@@ -47,6 +46,8 @@ export interface Session {
   lastAt: number;
   startedAt: number;
   waitingSince?: number;
+  /** anchor for the periodic waiting notification (ring); set on entering the wait */
+  waitingNotifyAt?: number;
   doneAt?: number;
   /** manual stale (⚑ button); any new message clears it (session is alive again) */
   staleMarked?: boolean;
@@ -101,6 +102,7 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
     lastAt: now,
     startedAt: prev?.startedAt ?? now,
     waitingSince: prev?.waitingSince,
+    waitingNotifyAt: prev?.waitingNotifyAt,
     doneAt: prev?.doneAt,
     pendingReview: prev?.pendingReview,
     // staleMarked is not inherited: any new message = signs of life = manual stale clears
@@ -131,7 +133,14 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
         if (msg.state === 'working' && prevState !== 'working') {
           s.ops = [];
         }
-        s.waitingSince = msg.state === 'waiting_input' ? (s.waitingSince ?? now) : undefined;
+        if (msg.state === 'waiting_input') {
+          s.waitingSince ??= now;
+          // anchor the notification cycle on entry; an already-waiting session keeps its cycle
+          if (prevState !== 'waiting_input') s.waitingNotifyAt = now;
+        } else {
+          s.waitingSince = undefined;
+          s.waitingNotifyAt = undefined;
+        }
         s.doneAt = msg.state === 'done' ? (s.doneAt ?? now) : undefined;
         // an explicit state change (turn end, new turn) supersedes a pending approval
         s.pendingReview = undefined;
@@ -225,10 +234,12 @@ export const useSessions = create<SessionsState>((set, get) => ({
   sessions: {},
 
   apply: (msg) => {
-    // waiting_input is the highest-value state: optional beep on first entry (design.md §5.2)
+    // entering waiting_input rings immediately — except when the user caused the
+    // wait (interrupt): the first ring is suppressed, the periodic cycle takes over
     if (msg.type === 'state' && msg.state === 'waiting_input') {
       const prev = get().sessions[msg.sid];
-      if ((!prev || prev.state !== 'waiting_input') && useSettings.getState().soundOnWaiting) {
+      const entering = !prev || prev.state !== 'waiting_input';
+      if (entering && !msg.interrupt && useSettings.getState().soundOnWaiting) {
         playBeep();
       }
     }
@@ -258,10 +269,25 @@ export const useSessions = create<SessionsState>((set, get) => ({
       let removed = false;
       let changed = false;
       const sessions: Record<string, Session> = {};
-      const reviewMs = useSettings.getState().reviewTimeoutSec * 1000;
+      const st0 = useSettings.getState();
+      const reviewMs = st0.reviewTimeoutSec * 1000;
+      const notifyMs = st0.waitingNotifyMin * 60_000;
+      const sound = st0.soundOnWaiting;
       for (const [sid, s] of Object.entries(st.sessions)) {
         if (s.state === 'done' && s.doneAt !== undefined && now - s.doneAt > DONE_FADE_MS) {
           removed = true;
+          continue;
+        }
+        // periodic waiting notification: ring; the ripple key derives from the same interval
+        if (
+          s.state === 'waiting_input' &&
+          sound &&
+          s.waitingNotifyAt !== undefined &&
+          now - s.waitingNotifyAt >= notifyMs
+        ) {
+          playBeep();
+          sessions[sid] = { ...s, waitingNotifyAt: now };
+          changed = true;
           continue;
         }
         // a pending approval that outlives the timeout becomes a yellow "possible approval"

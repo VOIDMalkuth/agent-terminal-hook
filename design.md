@@ -57,8 +57,10 @@ aggregation key — tmux/SSH reconnects keep the same card.
   FIFO by tool name. Codex has no failure event; ZCode marks failures via
   `PostToolUseFailure` with `ok:false`.
 - `waiting_input` sources: registration, turn end, interrupt (codex).
-  Optional local beep. Periodic ripple every 3 minutes while waiting (stops at
-  stale), in both expanded cards and the collapsed edge strip.
+  Beep: rings on entry (suppressed when the wait was entered via interrupt —
+  the user caused it) and every `waitingNotifyMin` minutes (default 5,
+  settings) together with the periodic ripple (stops at stale), in both
+  expanded cards and the collapsed edge strip.
 - `review` (codex PermissionRequest): auto-review makes the event ambiguous, so
   the card stays working; if the mark lingers past the configurable timeout
   (settings) it flips to a yellow "possible approval". Any op arrival clears it.

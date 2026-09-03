@@ -12,6 +12,9 @@ export interface SettingsState {
   alwaysOnTop: boolean;
   /** local beep when a session enters waiting_input (incl. turn end) */
   soundOnWaiting: boolean;
+  /** minutes between waiting_input notifications (ripple + ring); default 5.
+   *  A wait entered via interrupt skips its first ring. */
+  waitingNotifyMin: number;
   /** stale chip toggle: gray "stale" chip after >1h of silence; default on */
   staleOn: boolean;
   /** seconds a pending approval (PermissionRequest) stays green before flipping
@@ -35,6 +38,7 @@ export const useSettings = create<SettingsState>()(
       theme: 'dark',
       alwaysOnTop: true,
       soundOnWaiting: true,
+      waitingNotifyMin: 5,
       staleOn: true,
       reviewTimeoutSec: 30,
       collapsed: true,
@@ -50,6 +54,7 @@ export const useSettings = create<SettingsState>()(
         theme: s.theme,
         alwaysOnTop: s.alwaysOnTop,
         soundOnWaiting: s.soundOnWaiting,
+        waitingNotifyMin: s.waitingNotifyMin,
         staleOn: s.staleOn,
         reviewTimeoutSec: s.reviewTimeoutSec,
         dockSide: s.dockSide,
@@ -63,6 +68,8 @@ export const useSettings = create<SettingsState>()(
           theme: s.theme === 'light' ? ('light' as const) : ('dark' as const),
           alwaysOnTop: s.alwaysOnTop !== false,
           soundOnWaiting: s.soundOnWaiting !== false,
+          waitingNotifyMin:
+            typeof s.waitingNotifyMin === 'number' && s.waitingNotifyMin >= 1 ? s.waitingNotifyMin : 5,
           staleOn: true,
           reviewTimeoutSec: typeof s.reviewTimeoutSec === 'number' && s.reviewTimeoutSec > 0 ? s.reviewTimeoutSec : 30,
           dockSide:

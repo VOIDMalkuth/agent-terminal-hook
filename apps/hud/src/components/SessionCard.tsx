@@ -1,5 +1,5 @@
 import type { Session, SessionState } from '../store/sessions';
-import { STALE_MS, WAITING_PING_MS } from '../store/sessions';
+import { STALE_MS } from '../store/sessions';
 import { useSettings } from '../store/settings';
 import { relTime } from '../lib/time';
 import { syncDotPhase } from '../lib/anim';
@@ -106,10 +106,11 @@ export function SessionCard({
   const stale =
     useSettings((st) => st.staleOn) && s.state !== 'done' && (s.staleMarked || now - s.lastAt > STALE_MS);
   const waitingMin = s.waitingSince ? Math.max(1, Math.ceil((now - s.waitingSince) / 60000)) : 0;
-  // waiting_input periodic ripple: every 3 minutes after entering the wait (stops when stale)
+  // waiting_input periodic ripple: every waitingNotifyMin minutes (stops when stale)
+  const notifyMs = useSettings((st) => st.waitingNotifyMin) * 60_000;
   const waitPing =
     s.state === 'waiting_input' && !stale && s.waitingSince
-      ? Math.floor((now - s.waitingSince) / WAITING_PING_MS)
+      ? Math.floor((now - s.waitingSince) / notifyMs)
       : 0;
 
   return (

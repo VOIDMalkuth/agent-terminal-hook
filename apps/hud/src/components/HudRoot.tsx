@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type CSSProperties } from 'react';
-import { useSessions, sortSessions, STALE_MS, WAITING_PING_MS, type Session } from '../store/sessions';
+import { useSessions, sortSessions, STALE_MS, type Session } from '../store/sessions';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { isTauri } from '../lib/tauri';
@@ -17,10 +17,11 @@ function CollapsedDot({ s, now }: { s: Session; now: number }) {
   const stale =
     useSettings((st) => st.staleOn) && s.state !== 'done' && (s.staleMarked || now - s.lastAt > STALE_MS);
   const label = `${s.title ?? s.sid} · ${s.state}${stale ? ' · stale' : ''}`;
-  // waiting_input ripple every 3 minutes (stops when stale), same cadence as the expanded card
+  // waiting_input ripple every waitingNotifyMin minutes (stops when stale), same cadence as the card
+  const notifyMs = useSettings((st) => st.waitingNotifyMin) * 60_000;
   const waitPing =
     s.state === 'waiting_input' && !stale && s.waitingSince
-      ? Math.floor((now - s.waitingSince) / WAITING_PING_MS)
+      ? Math.floor((now - s.waitingSince) / notifyMs)
       : 0;
   // The button carries a bare drag-region: edges drag, clicking the visible dot center
   // bubbles up to the strip and expands

@@ -114,9 +114,10 @@ function toAthMessage(label, j) {
         },
       };
     case 'Stop':
-    case 'Interrupt':
-      // turn ended normally or was killed by the user: nothing runs, back to waiting
       return { ...base, type: 'state', state: 'waiting_input' };
+    case 'Interrupt':
+      // the user caused this one: flag it so the HUD skips the entry ring
+      return { ...base, type: 'state', state: 'waiting_input', interrupt: true };
     case 'SessionEnd':
       return { ...base, type: 'bye' };
     default:

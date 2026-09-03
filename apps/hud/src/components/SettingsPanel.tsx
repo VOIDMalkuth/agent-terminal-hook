@@ -103,6 +103,21 @@ export function SettingsPanel({ panelRef }: { panelRef: RefObject<HTMLDivElement
       </label>
 
       <label className="check">
+        waiting 通知间隔：
+        <input
+          type="number"
+          className="num-inline"
+          min={1}
+          max={60}
+          value={s.waitingNotifyMin}
+          onChange={(e) =>
+            s.patch({ waitingNotifyMin: Math.max(1, Math.min(60, Number(e.target.value) || 5)) })
+          }
+        />
+        分钟
+      </label>
+
+      <label className="check">
         审批提示阈值：
         <input
           type="number"

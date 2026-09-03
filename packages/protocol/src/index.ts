@@ -36,6 +36,9 @@ export const AthMessageSchema = z.object({
   title: z.string().optional(),
   /** for type=state; register may also carry it as the initial state (defaults to waiting_input) */
   state: z.enum(STATE_VALUES).optional(),
+  /** true on state=waiting_input entered via the Interrupt hook: the HUD skips
+   *  the entry ring (the user caused it) and relies on the periodic cycle */
+  interrupt: z.boolean().optional(),
   /** type=op — tool-level call stream (mechanically produced by hooks, high frequency) */
   op: z
     .object({
