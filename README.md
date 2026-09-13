@@ -84,7 +84,7 @@ npm run pkg:agent
 → `dist/ath-agent-<version>.tar.gz` — codex + claude installers, hook bridges, MCP
 server and ath-send in the repo's own layout. On the agent machine (WSL/Linux):
 unpack anywhere, enter the folder, run `node agents/codex/install.mjs`, then trust
-the hooks via `/hooks` in codex. Runtime files deploy to `~/.codex/ath` — the
+the hooks via `/hooks` in codex. Runtime files deploy to `~/.ath/codex` — the
 unpacked folder can be deleted after install. Claude support is opt-in and
 http-only: `node agents/claude/install.mjs` (deploys to `~/.ath/claude`).
 

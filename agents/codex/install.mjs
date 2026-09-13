@@ -8,9 +8,10 @@
 // and uninstall never touches foreign config. A pre-existing foreign hooks.json is
 // backed up to hooks.json.bak.<ts> before being replaced.
 //
-// Runtime files (hook.mjs, server.mjs) deploy to a fixed location under CODEX_HOME,
-// so the extracted package can be deleted right after install; hooks.json and
-// config.toml point at these copies, never at the package folder.
+// Runtime files (hook.mjs, server.mjs) deploy to a fixed location under ~/.ath/codex
+// (CODEX_HOME still owns the codex-side config: hooks.json, config.toml), so the
+// extracted package can be deleted right after install; hooks.json and config.toml
+// point at these copies, never at the package folder.
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -20,7 +21,8 @@ import { fileURLToPath } from 'node:url';
 const MARKER = 'ath-hud';
 const DIR = dirname(fileURLToPath(import.meta.url));
 const CODEX_HOME = process.env.CODEX_HOME ?? join(homedir(), '.codex');
-const DEPLOY_DIR = join(CODEX_HOME, 'ath');
+// fixed deploy root shared by all agents: ~/.ath/<agent>/ (claude uses ~/.ath/claude)
+const DEPLOY_DIR = join(homedir(), '.ath', 'codex');
 const HOOK_DST = join(DEPLOY_DIR, 'agents', 'codex', 'hook.mjs');
 const SERVER_DST = join(DEPLOY_DIR, 'remote', 'ath-report-mcp', 'server.mjs');
 const HOOK_PATH = HOOK_DST.replace(/\\/g, '/');
@@ -120,6 +122,7 @@ async function install() {
   console.log(`[+] runtime deployed -> ${DEPLOY_DIR}`);
 
   // 2. hooks.json
+  mkdirSync(CODEX_HOME, { recursive: true });
   const hooksFile = join(CODEX_HOME, 'hooks.json');
   if (existsSync(hooksFile) && !readFileSync(hooksFile, 'utf8').includes(MARKER)) {
     const bak = `${hooksFile}.bak.${Date.now()}`;
@@ -212,7 +215,7 @@ function uninstall() {
     writeFileSync(tomlFile, stripAthTomlBlocks(readFileSync(tomlFile, 'utf8')));
     console.log(`[-] config.toml: [mcp_servers.ath] removed`);
   }
-  const deployDir = join(CODEX_HOME, 'ath');
+  const deployDir = DEPLOY_DIR;
   if (existsSync(deployDir)) {
     rmSync(deployDir, { recursive: true, force: true });
     console.log(`[-] runtime removed -> ${deployDir}`);
