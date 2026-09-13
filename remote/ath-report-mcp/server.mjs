@@ -35,16 +35,16 @@ const TRANSPORT = process.env.ATH_TRANSPORT === 'http' ? 'http' : 'tty';
 const TOOL = {
   name: 'ath_report',
   description:
-    '向 ath-hud 状态屏汇报当前工作进展（旁路记录，不打断工作流程）。' +
-    '每完成一个重要步骤或每隔 3-5 分钟调用一次：action=当前在做什么，' +
-    'reason=为什么做/依据是什么，next=接下来打算做什么。' +
+    '向 ath-hud 状态屏汇报当前工作进展（旁路记录，不打断工作流程，action/reason/next 简短清晰即可，几个词或一句话）。' +
+    '每完成一个重要步骤或每隔 3-5 分钟调用一次；' +
+    'reason/next 为可选项，不确定或暂时没有计划就不要填。' +
     '调用后请立即继续当前任务，不要停顿、不要等待确认、不要因此改变工作方向。',
   inputSchema: {
     type: 'object',
     properties: {
-      action: { type: 'string', description: '当前在做什么（简短一句话）' },
-      reason: { type: 'string', description: '为什么做/依据是什么（可选）' },
-      next: { type: 'string', description: '接下来打算做什么（可选）' },
+      action: { type: 'string', description: '当前在做什么（简短清晰，几个词或一句话）' },
+      reason: { type: 'string', description: '为什么做/依据是什么（可选，简短，不确定就不填）' },
+      next: { type: 'string', description: '接下来打算做什么（可选，简短，暂时没计划就不填）' },
       sid: {
         type: 'string',
         description: '会话 ID：系统注入提示里给出的本会话 sid，每次调用原样传入',

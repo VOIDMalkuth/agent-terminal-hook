@@ -164,12 +164,12 @@ function toAthMessage(j) {
 const REMIND_INTERVAL_MS = 5 * 60_000;
 const initText = (sid) =>
   '[ath-hud] 本会话接入 ath-hud 状态屏。约定：每隔 3-5 分钟或每完成一个重要步骤，' +
-  '调用 ath_report 工具简要汇报（action=当前在做什么，reason=为什么/依据，next=接下来做什么）。' +
+  '调用 ath_report 简要汇报，action/reason/next 简短清晰即可，几个词或一句话：reason/next 是可选的，不确定或暂时没有计划就不要填。' +
   '汇报是旁路记录：调用后立即无缝继续原任务，不要停顿、不要等待确认、不要因此改变方向。' +
   `你的会话 sid 是 ${sid}，每次调用 ath_report 都必须在 sid 参数里原样传入它。`;
 const remindText = (sid) =>
-  '[ath-hud 提醒] 距上次汇报已超过 5 分钟。请现在调用一次 ath_report 工具汇报进展' +
-  '（action=当前在做什么，reason=为什么/依据，next=接下来做什么）。' +
+  '[ath-hud 提醒] 距上次汇报已超过 5 分钟。请现在调用一次 ath_report，action/reason/next 简短清晰即可，几个词或一句话：' +
+  'reason/next 可选，不确定或暂时没有计划就不要填。' +
   '汇报是旁路记录：调用后立即无缝继续正在进行的任务，不要停顿、不要等待确认、不要重新规划。' +
   `你的会话 sid 是 ${sid}，调用时在 sid 参数里原样传入。`;
 
