@@ -30,6 +30,7 @@ remote/              deployed on machines where agents run
   ath-report-mcp/      MCP stdio server: ath_report(action, reason?, next?) tool
 agents/              per-CLI bridges
   codex/               installer + lifecycle hooks + reminder injection (see codex/README.md)
+  claude/              opt-in installer + hooks, http-only (see claude/README.md)
   zcode/               single hook script, direct HTTP
 scripts/             dev utilities (icon generator, mock feed, OSC demo, packaging)
 dev/                 test harness (event collector, OSC probe, gateway dev window)
@@ -47,6 +48,11 @@ window.
 **ZCode (Windows):** point the seven hook events in `~/.zcode/cli/config.json` at
 `agents/zcode/hook.mjs <EventName>` (async, exit 0). Events map 1:1; ZCode has no
 SessionEnd, so sessions end via stale or manual delete.
+
+**Claude Code (http-only):** see `agents/claude/README.md`. Not installed by
+default — run `node agents/claude/install.mjs` explicitly. Claude hooks have no
+controlling terminal on any platform, so this bridge always POSTs to the gateway
+over HTTP; runtime deploys to `~/.ath/claude`.
 
 **Remote SSH agents:** copy `remote/ath-send` to the host, call it from hooks or
 scripts — the OSC rides the SSH byte stream into your local WezTerm gateway.
@@ -75,11 +81,12 @@ below to land.
 npm run pkg:agent
 ```
 
-→ `dist/ath-agent-<version>.tar.gz` — codex installer, hook bridge, MCP server
-and ath-send in the repo's own layout. On the agent machine (WSL/Linux): unpack
-anywhere, enter the folder, run `node agents/codex/install.mjs`, then trust the
-hooks via `/hooks` in codex. Runtime files deploy to `~/.codex/ath` — the
-unpacked folder can be deleted after install.
+→ `dist/ath-agent-<version>.tar.gz` — codex + claude installers, hook bridges, MCP
+server and ath-send in the repo's own layout. On the agent machine (WSL/Linux):
+unpack anywhere, enter the folder, run `node agents/codex/install.mjs`, then trust
+the hooks via `/hooks` in codex. Runtime files deploy to `~/.codex/ath` — the
+unpacked folder can be deleted after install. Claude support is opt-in and
+http-only: `node agents/claude/install.mjs` (deploys to `~/.ath/claude`).
 
 → `dist/ath-gateway-<version>.lua` — standalone copy of the WezTerm gateway. On
 the Windows side, dofile it from `~/.wezterm.lua` (see `gateway/wezterm/README.md`).

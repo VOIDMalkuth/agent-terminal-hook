@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Package the agent-side files for standalone deployment: exactly what
-// agents/codex/install.mjs references through its own relative paths, laid out
-// identically to the repo so the installer works straight from the archive.
+// agents/*/install.mjs reference through their own relative paths, laid out
+// identically to the repo so the installers work straight from the archive.
 // Outputs into dist/ (version's single source: apps/hud/src-tauri/tauri.conf.json):
 //   ath-agent-<version>.tar.gz — unpack anywhere, then inside it run
-//     `node agents/codex/install.mjs` (Linux/WSL; then trust the hooks via /hooks)
+//     `node agents/codex/install.mjs` (Linux/WSL; then trust the hooks via /hooks).
+//     Claude support is opt-in and http-only: `node agents/claude/install.mjs`.
 //   ath-gateway-<version>.lua — standalone copy of the WezTerm gateway (configured
 //     by hand on the Windows side, so it ships next to the archive, not inside it)
 // Deliberately excluded from the archive: docs, HUD side.
@@ -23,6 +24,8 @@ const OUT_REL = `dist/ath-agent-${VERSION}.tar.gz`;
 const FILES = [
   'agents/codex/install.mjs',
   'agents/codex/hook.mjs',
+  'agents/claude/install.mjs',
+  'agents/claude/hook.mjs',
   'remote/ath-send',
   'remote/ath-report-mcp/server.mjs',
 ];
