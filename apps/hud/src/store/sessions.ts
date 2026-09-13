@@ -305,9 +305,11 @@ export const useSessions = create<SessionsState>((set, get) => ({
   clear: () => set({ sessions: {} }),
 }));
 
-/** waiting_input first, then possible approval, then working, then done; recency within a rank */
+/** waiting_input first, then possible approval, then working, then done;
+ *  within a rank: order of first appearance (newest first) — ordering by last
+ *  activity flip-flopped cards on every message when several agents ran at once */
 export function sortSessions(list: Session[], _now: number): Session[] {
   const rank = (s: Session) =>
     s.state === 'waiting_input' ? 0 : s.state === 'review' ? 1 : s.state === 'working' ? 2 : 3;
-  return [...list].sort((a, b) => rank(a) - rank(b) || b.lastAt - a.lastAt);
+  return [...list].sort((a, b) => rank(a) - rank(b) || b.startedAt - a.startedAt);
 }
