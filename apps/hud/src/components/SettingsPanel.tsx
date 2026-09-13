@@ -123,12 +123,12 @@ export function SettingsPanel({ panelRef }: { panelRef: RefObject<HTMLDivElement
           type="number"
           className="num-inline"
           min={5}
-          max={600}
+          max={3600}
           step={5}
           value={s.reviewTimeoutSec}
           onChange={(e) =>
             s.patch({
-              reviewTimeoutSec: Math.max(5, Math.min(600, Number(e.target.value) || 30)),
+              reviewTimeoutSec: Math.max(5, Math.min(3600, Number(e.target.value) || 30)),
             })
           }
         />
