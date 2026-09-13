@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AthMessage, SessionState } from '@ath/protocol';
 import { useSettings } from './settings';
 import { playBeep } from '../lib/sound';
+import { formatOp } from '../lib/opFormat';
 
 export const STALE_MS = 60 * 60 * 1000; // >1h without any message -> stale chip (design.md §2.3)
 /** waiting_input notification interval (ripple + ring) lives in settings: waitingNotifyMin */
@@ -150,8 +151,11 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
     case 'op':
       if (msg.op) {
         const op = msg.op;
+        // receiver-side display formatting (lib/opFormat); pairing runs on the
+        // formatted name so start/end always map to the same entry
+        const disp = formatOp(op.tool, op.input);
         if (op.phase === 'end') {
-          const i = lastRunningIndex(s.ops, op.key, op.tool);
+          const i = lastRunningIndex(s.ops, op.key, disp.tool);
           if (i >= 0) {
             // paired with its start: close in place, record duration, no new entry
             const next = s.ops.slice();
@@ -164,23 +168,23 @@ function applyMessage(sessions: Record<string, Session>, msg: AthMessage): Recor
           } else {
             // start never arrived (HUD reconnected mid-run / dropped hook): close standalone
             s.ops = pushOp(s.ops, {
-              tool: op.tool,
-              summary: op.summary,
+              tool: disp.tool,
+              summary: disp.summary,
               at: now,
               status: op.ok === false ? 'failed' : 'done',
             });
           }
         } else if (op.phase === 'start') {
           s.ops = pushOp(s.ops, {
-            tool: op.tool,
-            summary: op.summary,
+            tool: disp.tool,
+            summary: disp.summary,
             at: now,
             status: 'running',
             ...(op.key ? { key: op.key } : {}),
           });
         } else {
           // no phase: instant event (mock script / legacy senders)
-          s.ops = pushOp(s.ops, { tool: op.tool, summary: op.summary, at: now });
+          s.ops = pushOp(s.ops, { tool: disp.tool, summary: disp.summary, at: now });
         }
         // op = a tool is executing: back to working (e.g. approved permission), ends wait/done;
         // any op arrival also clears a pending approval (the tool either ran or was replaced)

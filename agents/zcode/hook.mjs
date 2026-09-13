@@ -33,6 +33,21 @@ function compact(v) {
   return s.length > 80 ? `${s.slice(0, 79)}…` : s;
 }
 
+// op.input payload: raw tool args for the HUD's receiver-side display rules
+// (lib/opFormat.ts); over budget degrade to truncated JSON text (a string input
+// displays verbatim). Loopback POST — the cap only bounds message size.
+const INPUT_MAX_BYTES = 1200;
+function rawInput(v) {
+  if (v == null) return undefined;
+  if (typeof v === 'string') return v.length <= INPUT_MAX_BYTES ? v : compact(v);
+  if (typeof v !== 'object') return undefined;
+  try {
+    return JSON.stringify(v).length <= INPUT_MAX_BYTES ? v : compact(v);
+  } catch {
+    return undefined;
+  }
+}
+
 // Pre/Post pairing key: ZCode carries toolCallId on both sides (measured via dump);
 // fall back to a few common spellings
 function pairKey(j) {
@@ -69,7 +84,7 @@ function toAthMessage(label, j) {
         type: 'op',
         op: {
           tool: j.tool_name ?? j.toolName ?? j.tool ?? label,
-          summary: compact(j.tool_input ?? j.input),
+          input: rawInput(j.tool_input ?? j.input),
           phase: 'start',
           ...(pairKey(j) ? { key: pairKey(j) } : {}),
         },
@@ -82,11 +97,11 @@ function toAthMessage(label, j) {
         type: 'op',
         op: {
           tool: j.tool_name ?? j.toolName ?? j.tool ?? label,
-          // when paired, the HUD keeps the start summary; this only shows if the start
-          // never arrived. Failure event field names not yet measured — cover a few
-          summary: failed
+          // when paired, the HUD keeps the start's display; this input only shows if
+          // the start never arrived. Failure event field names not yet measured — cover a few
+          input: failed
             ? `失败: ${compact(j.error ?? j.errorMessage ?? j.error_message ?? j.tool_response)}`
-            : compact(j.tool_input ?? j.input),
+            : rawInput(j.tool_input ?? j.input),
           phase: 'end',
           ...(failed ? { ok: false } : {}),
           ...(pairKey(j) ? { key: pairKey(j) } : {}),

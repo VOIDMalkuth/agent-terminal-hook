@@ -43,7 +43,11 @@ export const AthMessageSchema = z.object({
   op: z
     .object({
       tool: z.string().min(1),
-      summary: z.string().optional(),
+      /** raw tool input for receiver-side display formatting (HUD lib/opFormat.ts).
+       *  Usually the hook's tool_input object; senders cap the payload (~1.2KB, under
+       *  the fragment-envelope threshold) and degrade to a pre-truncated JSON text
+       *  (a plain string input displays verbatim) */
+      input: z.unknown().optional(),
       /** pairing key for PreToolUse(start)/PostToolUse(end) (e.g. toolCallId; HUD pairs same-tool FIFO otherwise) */
       key: z.string().optional(),
       /** start=running; end=closing. Missing phase means an instant event */

@@ -4,7 +4,7 @@
 // Mapping:
 //   SessionStart (source startup/resume/clear) -> register(waiting_input); source=compact
 //     ignored (mid-turn continuation; flipping to waiting would flash a working card)
-//   UserPromptSubmit -> state(working)   PreToolUse -> op(start, key=tool_use_id)
+//   UserPromptSubmit -> state(working)   PreToolUse -> op(start, key=tool_use_id, input=raw args)
 //   PostToolUse -> op(end, key=tool_use_id) (Codex has no failure event, ok is never set)
 //   PermissionRequest -> review (stays working; HUD hints possible-approval after a timeout)
 //   Interrupt -> state(waiting_input) (user killed the turn; 3s budget like SessionEnd)
@@ -60,6 +60,21 @@ function compact(v) {
   return s.length > 80 ? `${s.slice(0, 79)}…` : s;
 }
 
+// op.input budget: keep under the ~1.5KB fragment-envelope threshold so the OSC
+// message stays single-frame; over budget degrade to truncated JSON text (the HUD
+// displays a string input verbatim). Display rules live in the HUD (lib/opFormat.ts).
+const INPUT_MAX_BYTES = 1200;
+function rawInput(v) {
+  if (v == null) return undefined;
+  if (typeof v === 'string') return v.length <= INPUT_MAX_BYTES ? v : compact(v);
+  if (typeof v !== 'object') return undefined;
+  try {
+    return JSON.stringify(v).length <= INPUT_MAX_BYTES ? v : compact(v);
+  } catch {
+    return undefined;
+  }
+}
+
 function toAthMessage(label, j) {
   const sessionId = j.session_id ?? '';
   if (!sessionId) return null;
@@ -86,7 +101,7 @@ function toAthMessage(label, j) {
         type: 'op',
         op: {
           tool: j.tool_name ?? label,
-          summary: compact(j.tool_input),
+          input: rawInput(j.tool_input),
           phase: 'start',
           ...(j.tool_use_id ? { key: j.tool_use_id } : {}),
         },

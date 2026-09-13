@@ -46,6 +46,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * pairing (key), failure close (ok:false), and review marks — session A shows a
  * fast auto-review (stays green), session D an approval that lingers past
  * reviewTimeoutSec and flips the card to the yellow "possible approval" state.
+ * Ops carry raw tool args in op.input; the HUD formats the display itself
+ * (mcp__srv__tool -> srv:tool, Bash command objects/argv arrays -> command line).
  * `at` is ms at speed=1. sids are regenerated each cycle so cards never collide.
  */
 function buildScenario(sidA, sidB, sidC, sidD) {
@@ -60,51 +62,54 @@ function buildScenario(sidA, sidB, sidC, sidD) {
     // -- A: register -> paired op (start/end) -> report -> paired op --
     { at: 0, msg: mk(A, { type: 'register', state: 'waiting_input' }) },
     { at: 600, msg: mk(A, { type: 'state', state: 'working' }) },
-    { at: 900, msg: mk(A, { type: 'op', op: { tool: 'Edit', summary: 'src/auth.rs:120', phase: 'start', key: 'e1' } }) },
-    { at: 2400, msg: mk(A, { type: 'op', op: { tool: 'Edit', summary: 'src/auth.rs:120', phase: 'end', key: 'e1' } }) },
+    { at: 900, msg: mk(A, { type: 'op', op: { tool: 'Edit', input: 'src/auth.rs:120', phase: 'start', key: 'e1' } }) },
+    { at: 2400, msg: mk(A, { type: 'op', op: { tool: 'Edit', input: 'src/auth.rs:120', phase: 'end', key: 'e1' } }) },
     { at: 3000, msg: mk(A, { type: 'report', report: { summary: '重构登录权限校验', reason: 'token 校验遗漏过期分支', next: '修完跑全量测试' } }) },
-    { at: 4200, msg: mk(A, { type: 'op', op: { tool: 'Bash', summary: 'cargo test -q', phase: 'start', key: 'e2' } }) },
+    { at: 4200, msg: mk(A, { type: 'op', op: { tool: 'Bash', input: { command: 'cargo test -q' }, phase: 'start', key: 'e2' } }) },
     // auto-review resolves fast: the card stays green throughout
     { at: 4400, msg: mk(A, { type: 'review', review: { tool: 'Bash', key: 'e2' } }) },
-    { at: 5600, msg: mk(A, { type: 'op', op: { tool: 'Bash', summary: 'cargo test -q', phase: 'end', key: 'e2' } }) },
+    { at: 5600, msg: mk(A, { type: 'op', op: { tool: 'Bash', input: { command: 'cargo test -q' }, phase: 'end', key: 'e2' } }) },
     { at: 7000, msg: mk(A, { type: 'state', state: 'waiting_input' }) }, // awaiting approval
 
     // -- B joins mid-run: read file -> waiting --
     { at: 8200, msg: mk(B, { type: 'register', state: 'waiting_input' }) },
     { at: 9200, msg: mk(B, { type: 'state', state: 'working' }) },
-    { at: 9600, msg: mk(B, { type: 'op', op: { tool: 'Read', summary: 'src/main.rs', phase: 'start', key: 'r1' } }) },
-    { at: 10800, msg: mk(B, { type: 'op', op: { tool: 'Read', summary: 'src/main.rs', phase: 'end', key: 'r1' } }) },
+    { at: 9600, msg: mk(B, { type: 'op', op: { tool: 'Read', input: 'src/main.rs', phase: 'start', key: 'r1' } }) },
+    { at: 10800, msg: mk(B, { type: 'op', op: { tool: 'Read', input: 'src/main.rs', phase: 'end', key: 'r1' } }) },
     { at: 12200, msg: mk(A, { type: 'state', state: 'working' }) }, // A: approved, resumes work
-    { at: 13400, msg: mk(A, { type: 'op', op: { tool: 'Edit', summary: 'src/auth.rs:201', phase: 'start', key: 'e3' } }) },
-    { at: 14800, msg: mk(A, { type: 'op', op: { tool: 'Edit', summary: 'src/auth.rs:201', phase: 'end', key: 'e3' } }) },
+    { at: 13400, msg: mk(A, { type: 'op', op: { tool: 'Edit', input: 'src/auth.rs:201', phase: 'start', key: 'e3' } }) },
+    { at: 14800, msg: mk(A, { type: 'op', op: { tool: 'Edit', input: 'src/auth.rs:201', phase: 'end', key: 'e3' } }) },
     { at: 16200, msg: mk(B, { type: 'state', state: 'waiting_input' }) },
 
     // -- C short-lived: finishes and says bye --
     { at: 17600, msg: mk(C, { type: 'register', state: 'waiting_input' }) },
     { at: 18400, msg: mk(C, { type: 'state', state: 'working' }) },
-    { at: 18800, msg: mk(C, { type: 'op', op: { tool: 'Grep', summary: 'docs/**/*.md', phase: 'start', key: 'c1' } }) },
-    { at: 19900, msg: mk(C, { type: 'op', op: { tool: 'Grep', summary: 'docs/**/*.md', phase: 'end', key: 'c1' } }) },
+    { at: 18800, msg: mk(C, { type: 'op', op: { tool: 'Grep', input: 'docs/**/*.md', phase: 'start', key: 'c1' } }) },
+    { at: 19900, msg: mk(C, { type: 'op', op: { tool: 'Grep', input: 'docs/**/*.md', phase: 'end', key: 'c1' } }) },
+    // MCP call: the HUD shortens mcp__ath__ath_report to ath:ath_report, no JSON body
+    { at: 20200, msg: mk(C, { type: 'op', op: { tool: 'mcp__ath__ath_report', phase: 'start', key: 'm1' } }) },
+    { at: 21000, msg: mk(C, { type: 'op', op: { tool: 'mcp__ath__ath_report', phase: 'end', key: 'm1' } }) },
     { at: 21400, msg: mk(C, { type: 'report', report: { summary: 'API 文档已生成', reason: '接口注释与实现已对齐', next: '无需后续' } }) },
     { at: 22800, msg: mk(C, { type: 'bye' }) },
 
     // -- B: one failed Bash (ok:false -> ✗) + report --
     { at: 23600, msg: mk(B, { type: 'state', state: 'working' }) },
-    { at: 24000, msg: mk(B, { type: 'op', op: { tool: 'Bash', summary: 'npm test', phase: 'start', key: 'r2' } }) },
-    { at: 26400, msg: mk(B, { type: 'op', op: { tool: 'Bash', summary: 'npm test', phase: 'end', key: 'r2', ok: false } }) },
+    { at: 24000, msg: mk(B, { type: 'op', op: { tool: 'Bash', input: { command: 'npm test' }, phase: 'start', key: 'r2' } }) },
+    { at: 26400, msg: mk(B, { type: 'op', op: { tool: 'Bash', input: { command: 'npm test' }, phase: 'end', key: 'r2', ok: false } }) },
     { at: 27800, msg: mk(B, { type: 'report', report: { summary: '参数解析抽到独立模块', reason: 'main.rs 过长，先拆再测', next: '修复失败用例后补集成测试' } }) },
     { at: 29000, msg: mk(B, { type: 'state', state: 'waiting_input' }) },
 
     // -- D: op without register (lost first message / HUD reconnect), then an
     // approval that lingers: past reviewTimeoutSec (30s default) the card flips
     // to yellow "possible approval"; the op end returns it to working --
-    { at: 29600, msg: mk(D, { type: 'op', op: { tool: 'Bash', summary: 'git rebase --continue', phase: 'start', key: 'd1' } }) },
+    { at: 29600, msg: mk(D, { type: 'op', op: { tool: 'Bash', input: { command: ['git', 'rebase', '--continue'] }, phase: 'start', key: 'd1' } }) },
     { at: 30000, msg: mk(D, { type: 'review', review: { tool: 'Bash', key: 'd1' } }) },
     { at: 65000, msg: mk(D, { type: 'op', op: { tool: 'Bash', phase: 'end', key: 'd1' } }) },
     { at: 66000, msg: mk(D, { type: 'state', state: 'waiting_input' }) },
 
     // -- closing: A finishes its last test round and says bye --
-    { at: 33600, msg: mk(A, { type: 'op', op: { tool: 'Bash', summary: 'cargo test --all', phase: 'start', key: 'e4' } }) },
-    { at: 35800, msg: mk(A, { type: 'op', op: { tool: 'Bash', summary: 'cargo test --all', phase: 'end', key: 'e4' } }) },
+    { at: 33600, msg: mk(A, { type: 'op', op: { tool: 'Bash', input: { command: 'cargo test --all' }, phase: 'start', key: 'e4' } }) },
+    { at: 35800, msg: mk(A, { type: 'op', op: { tool: 'Bash', input: { command: 'cargo test --all' }, phase: 'end', key: 'e4' } }) },
     { at: 37200, msg: mk(A, { type: 'report', report: { summary: '过期分支已补齐并通过全量测试', reason: '补时钟回拨边界用例', next: '无需后续' } }) },
     { at: 38600, msg: mk(A, { type: 'bye' }) },
     { at: 40000, msg: mk(B, { type: 'bye' }) },
