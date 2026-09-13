@@ -15,7 +15,6 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const MARKER = 'ath-hud';
@@ -83,14 +82,28 @@ function stripAthTomlBlocks(text) {
 }
 
 // Ask before replacing an existing deployment unless --yes/-y was passed.
+// The question goes through console.log (readline's inline prompt does not
+// render on every Linux TTY) and the answer is read as one raw stdin line.
 async function confirmOverwrite() {
   if (ASSUME_YES || !existsSync(DEPLOY_DIR)) return true;
-  const rl = createInterface({ input: process.stdin });
-  const answer = await new Promise((res) =>
-    rl.question(`[?] ${DEPLOY_DIR} already exists. Overwrite its runtime files? [y/N] `, res),
-  );
-  rl.close();
-  return /^y(es)?$/i.test(answer.trim());
+  console.log(`[?] ${DEPLOY_DIR} already exists. Overwrite its runtime files? [y/N]`);
+  const answer = await new Promise((res) => {
+    const onData = (chunk) => {
+      cleanup();
+      res(chunk.toString().trim());
+    };
+    const onEnd = () => {
+      cleanup();
+      res(''); // EOF: default to "no"
+    };
+    function cleanup() {
+      process.stdin.removeListener('data', onData);
+      process.stdin.removeListener('end', onEnd);
+    }
+    process.stdin.on('data', onData);
+    process.stdin.once('end', onEnd);
+  });
+  return /^y(es)?$/i.test(answer);
 }
 
 async function install() {
