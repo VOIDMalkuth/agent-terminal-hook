@@ -262,8 +262,8 @@ body {
   flex: none;
 }
 /* working and waiting_input share one animation: within a 2.4s period the dot grows
-   and fades (biggest when faintest); color tells the states apart. animation-delay is
-   written inline on mount (lib/anim.ts) to keep all dots in phase */
+   and fades (biggest when faintest); color tells the states apart. All dots are held
+   in one global phase by lib/anim.ts (re-seeked onto the document timeline) */
 .dot-working {
   background: var(--green);
   animation: breathe 2.4s ease-in-out infinite;

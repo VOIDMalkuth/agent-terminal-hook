@@ -2,7 +2,7 @@ import type { Session, SessionState } from '../store/sessions';
 import { STALE_MS } from '../store/sessions';
 import { useSettings } from '../store/settings';
 import { relTime } from '../lib/time';
-import { syncDotPhase } from '../lib/anim';
+import { useDotPhase } from '../lib/anim';
 import { cx } from '../lib/cx';
 
 const STATE_LABEL: Record<SessionState, string> = {
@@ -14,13 +14,15 @@ const STATE_LABEL: Record<SessionState, string> = {
 
 /** Status dot: green=working, amber=waiting_input (same pulse animation, color only), ✓=done.
  *  A pingKey change injects a one-shot .dot-ping child to replay the pulse ring (op arrival;
- *  waiting_input adds a 3-minute periodic ripple computed in SessionCard). The dot itself is
- *  never remounted, so breathe/blink phase is never interrupted. */
+ *  waiting_input adds a 3-minute periodic ripple computed in SessionCard). The dot element is
+ *  never remounted, but done/stale class swaps kill the breathe animation — useDotPhase
+ *  re-locks its phase after every such restart. */
 function StatusDot({ state, pingKey }: { state: SessionState; pingKey: string }) {
-  if (state === 'done') return <span className="dot dot-done">✓</span>;
+  const cls = cx('dot', state === 'done' ? 'dot-done' : `dot-${state}`);
+  const ref = useDotPhase(cls);
   return (
-    <span ref={syncDotPhase} className={cx('dot', `dot-${state}`)}>
-      {pingKey && <span key={pingKey} className="dot-ping" />}
+    <span ref={ref} className={cls}>
+      {state === 'done' ? '✓' : pingKey ? <span key={pingKey} className="dot-ping" /> : null}
     </span>
   );
 }

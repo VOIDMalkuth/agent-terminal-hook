@@ -3,7 +3,7 @@ import { useSessions, sortSessions, STALE_MS, type Session } from '../store/sess
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { isTauri } from '../lib/tauri';
-import { syncDotPhase } from '../lib/anim';
+import { useDotPhase } from '../lib/anim';
 import { cx } from '../lib/cx';
 import { setHudSize, snapHudEdge, stripDims } from '../lib/window';
 import { SessionCard } from './SessionCard';
@@ -23,20 +23,19 @@ function CollapsedDot({ s, now }: { s: Session; now: number }) {
     s.state === 'waiting_input' && !stale && s.waitingSince
       ? Math.floor((now - s.waitingSince) / notifyMs)
       : 0;
+  const cls = cx(
+    'dot dot-big',
+    s.state === 'done' ? 'dot-done' : `dot-${s.state}`,
+    stale && 'dot-stale',
+  );
+  const ref = useDotPhase(cls);
   // The button carries a bare drag-region: edges drag, clicking the visible dot center
   // bubbles up to the strip and expands
   return (
     <button className="dot-btn" data-tauri-drag-region title={label}>
-      {s.state === 'done' ? (
-        <span className="dot dot-done dot-big">✓</span>
-      ) : (
-        <span
-          ref={syncDotPhase}
-          className={cx('dot dot-big', `dot-${s.state}`, stale && 'dot-stale')}
-        >
-          {waitPing > 0 && <span key={waitPing} className="dot-ping" />}
-        </span>
-      )}
+      <span ref={ref} className={cls}>
+        {s.state === 'done' ? '✓' : waitPing > 0 ? <span key={waitPing} className="dot-ping" /> : null}
+      </span>
     </button>
   );
 }
