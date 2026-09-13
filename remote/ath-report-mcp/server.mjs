@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // ath-report-mcp -- MCP stdio server exposing the ath_report tool so the model can
-// self-report to ath-hud (design.md §6).
+// self-report to ath-hud (design.md §6). Shared across agents (codex, claude, ...):
+// whichever agent registers it, the report card follows the sid's agent prefix.
 //
-// Flow: codex spawns this process (stdio = MCP JSON-RPC, reserved by the protocol —
-// debug prints go to stderr only) -> tools/call(ath_report) -> ATH v1 report message
-// -> remote/ath-send writes /dev/tty (same exit as codex-hook; needs a TTY, WSL/SSH
-// have one; ATH_TRANSPORT=http forces direct HTTP) -> OSC 1337 -> WezTerm gateway
-// -> the card's self-description.
+// Flow: the agent CLI spawns this process (stdio = MCP JSON-RPC, reserved by the
+// protocol — debug prints go to stderr only) -> tools/call(ath_report) -> ATH v1
+// report message -> remote/ath-send writes /dev/tty (same exit as codex-hook; needs
+// a TTY, WSL/SSH have one; ATH_TRANSPORT=http forces direct HTTP) -> OSC 1337 ->
+// WezTerm gateway -> the card's self-description.
 //
 // Session attribution (most to least trusted; resolved once per process — one MCP
 // server per session):
@@ -143,13 +144,17 @@ function resolveSid(preferred) {
 
 async function forwardReport(args) {
   const cwd = process.cwd();
+  const sid = resolveSid(args.sid);
+  // the sid prefix names the owning agent (claude:<uuid> / codex:<uuid> / ...); the
+  // server is shared across agents, so the card chip must not be hardcoded
+  const agent = /^[a-z]+:/.test(sid) ? sid.slice(0, sid.indexOf(':')) : 'codex';
   const msg = {
     v: 1,
     ts: Math.floor(Date.now() / 1000),
-    sid: resolveSid(args.sid),
-    agent: 'codex',
+    sid,
+    agent,
     cwd,
-    title: cwd ? basename(cwd) : 'Codex 会话',
+    title: cwd ? basename(cwd) : `${agent} 会话`,
     type: 'report',
     report: {
       summary: String(args.action ?? '').slice(0, 200),
